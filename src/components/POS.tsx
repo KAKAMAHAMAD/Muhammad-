@@ -29,12 +29,17 @@ export const POS = () => {
     );
   }, [products, searchTerm]);
 
-  const handleCheckout = (paidAmount: number, note: string) => {
-    const transactionId = checkout(paidAmount, note);
-    if (transactionId) {
-      setReceiptTransactionId(transactionId);
+  const handleCheckout = async (paidAmount: number, note: string) => {
+    try {
+      const transactionId = await checkout(paidAmount, note);
+      if (transactionId) {
+        setReceiptTransactionId(transactionId);
+      }
+      setIsCheckoutModalOpen(false);
+    } catch (error: any) {
+      console.error("Error during checkout:", error);
+      alert("کێشەیەک ڕوویدا لە کاتی فرۆشتن: " + (error.message || ""));
     }
-    setIsCheckoutModalOpen(false);
   };
 
   return (
@@ -248,10 +253,15 @@ export const POS = () => {
       {isNewCustomerModalOpen && (
         <NewCustomerModal
           onClose={() => setIsNewCustomerModalOpen(false)}
-          onSave={(customerData) => {
-            const newId = addCustomer(customerData);
-            setSelectedCustomerId(newId);
-            setIsNewCustomerModalOpen(false);
+          onSave={async (customerData) => {
+            try {
+              const newId = await addCustomer(customerData);
+              setSelectedCustomerId(newId);
+              setIsNewCustomerModalOpen(false);
+            } catch (error: any) {
+              console.error("Error adding customer:", error);
+              alert("کێشەیەک ڕوویدا لە کاتی زیادکردنی کڕیار: " + (error.message || ""));
+            }
           }}
         />
       )}

@@ -7,7 +7,7 @@ import { ConfirmModal, AlertModal } from './Modals';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const Inventory = () => {
-  const { products, addProduct, updateProduct, deleteProduct, addToCart, setProducts } = useStore();
+  const { products, addProduct, updateProduct, deleteProduct, deleteAllProducts, addToCart, setProducts } = useStore();
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -32,8 +32,13 @@ export const Inventory = () => {
     setConfirmModal({
       isOpen: true,
       message: 'دڵنیای لە سڕینەوەی ئەم کاڵایە؟',
-      onConfirm: () => {
-        deleteProduct(id);
+      onConfirm: async () => {
+        try {
+          await deleteProduct(id);
+        } catch (error: any) {
+          console.error("Error deleting product:", error);
+          alert("کێشەیەک ڕوویدا لە کاتی سڕینەوەی کاڵا: " + (error.message || ""));
+        }
         setConfirmModal(null);
       }
     });
@@ -43,8 +48,13 @@ export const Inventory = () => {
     setConfirmModal({
       isOpen: true,
       message: 'ئایا دڵنیای لە سڕینەوەی هەموو کاڵاکان؟ ئەم کردارە پاشگەزبوونەوەی نییە!',
-      onConfirm: () => {
-        setProducts([]);
+      onConfirm: async () => {
+        try {
+          await deleteAllProducts();
+        } catch (error: any) {
+          console.error("Error deleting all products:", error);
+          alert("کێشەیەک ڕوویدا لە کاتی سڕینەوەی هەموو کاڵاکان: " + (error.message || ""));
+        }
         setConfirmModal(null);
       }
     });
@@ -163,13 +173,18 @@ export const Inventory = () => {
         <ProductModal
           product={editingProduct}
           onClose={() => setIsModalOpen(false)}
-          onSave={(p) => {
-            if (editingProduct) {
-              updateProduct(editingProduct.id, p);
-            } else {
-              addProduct(p);
+          onSave={async (p) => {
+            try {
+              if (editingProduct) {
+                await updateProduct(editingProduct.id, p);
+              } else {
+                await addProduct(p);
+              }
+              setIsModalOpen(false);
+            } catch (error: any) {
+              console.error("Error saving product:", error);
+              alert("کێشەیەک ڕوویدا لە کاتی پاشەکەوتکردن: " + (error.message || ""));
             }
-            setIsModalOpen(false);
           }}
         />
       )}

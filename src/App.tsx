@@ -14,6 +14,7 @@ import { History } from './components/History';
 import { Calculator } from './components/Calculator';
 import { Settings } from './components/Settings';
 import { Login } from './components/Login';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const AppContent = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'customers' | 'pos' | 'history' | 'calculator' | 'settings'>('dashboard');
@@ -46,9 +47,11 @@ const AppContent = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
 

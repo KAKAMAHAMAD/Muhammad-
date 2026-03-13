@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction } from '../types';
 
 export const History = () => {
-  const { transactions, customers, products, undoTransaction, returnItem, setTransactions } = useStore();
+  const { transactions, customers, products, undoTransaction, returnItem, deleteAllTransactions, setTransactions } = useStore();
   const [activeTab, setActiveTab] = useState<'customers' | 'inventory'>('customers');
   const [selectedCustomer, setSelectedCustomer] = useState<string>('all');
   const [customerSearch, setCustomerSearch] = useState('');
@@ -45,8 +45,13 @@ export const History = () => {
     setConfirmModal({
       isOpen: true,
       message: 'ئایا دڵنیای لە سڕینەوەی هەموو مێژووەکان؟ ئەم کردارە پاشگەزبوونەوەی نییە!',
-      onConfirm: () => {
-        setTransactions([]);
+      onConfirm: async () => {
+        try {
+          await deleteAllTransactions();
+        } catch (error: any) {
+          console.error("Error deleting all transactions:", error);
+          alert("کێشەیەک ڕوویدا لە کاتی سڕینەوەی هەموو مێژووەکان: " + (error.message || ""));
+        }
         setConfirmModal(null);
       }
     });
@@ -148,8 +153,22 @@ export const History = () => {
                   customerName={getCustomerName(t.customerId)}
                   getProductName={getProductName}
                   formatDate={formatDate}
-                  onUndo={() => undoTransaction(t.id)}
-                  onReturn={(productId, qty) => returnItem(t.id, productId, qty)}
+                  onUndo={async () => {
+                    try {
+                      await undoTransaction(t.id);
+                    } catch (error: any) {
+                      console.error("Error undoing transaction:", error);
+                      alert("کێشەیەک ڕوویدا لە کاتی گەڕاندنەوە: " + (error.message || ""));
+                    }
+                  }}
+                  onReturn={async (productId, qty) => {
+                    try {
+                      await returnItem(t.id, productId, qty);
+                    } catch (error: any) {
+                      console.error("Error returning item:", error);
+                      alert("کێشەیەک ڕوویدا لە کاتی گەڕاندنەوەی کاڵا: " + (error.message || ""));
+                    }
+                  }}
                   allTransactions={transactions}
                 />
               ))}
@@ -170,7 +189,14 @@ export const History = () => {
                 transaction={t}
                 getProductName={getProductName}
                 formatDate={formatDate}
-                onUndo={() => undoTransaction(t.id)}
+                onUndo={async () => {
+                  try {
+                    await undoTransaction(t.id);
+                  } catch (error: any) {
+                    console.error("Error undoing inventory transaction:", error);
+                    alert("کێشەیەک ڕوویدا لە کاتی گەڕاندنەوە: " + (error.message || ""));
+                  }
+                }}
               />
             ))}
             {inventoryTransactions.length === 0 && (

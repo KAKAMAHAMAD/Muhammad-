@@ -7,7 +7,7 @@ import { ConfirmModal } from './Modals';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const Customers = () => {
-  const { customers, transactions, addCustomer, updateCustomer, deleteCustomer, receivePayment, setCustomers } = useStore();
+  const { customers, transactions, addCustomer, updateCustomer, deleteCustomer, deleteAllCustomers, receivePayment, setCustomers } = useStore();
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -47,8 +47,13 @@ export const Customers = () => {
     setConfirmModal({
       isOpen: true,
       message: 'دڵنیای لە سڕینەوەی ئەم کڕیارە؟',
-      onConfirm: () => {
-        deleteCustomer(id);
+      onConfirm: async () => {
+        try {
+          await deleteCustomer(id);
+        } catch (error: any) {
+          console.error("Error deleting customer:", error);
+          alert("کێشەیەک ڕوویدا لە کاتی سڕینەوەی کڕیار: " + (error.message || ""));
+        }
         setConfirmModal(null);
       }
     });
@@ -58,8 +63,13 @@ export const Customers = () => {
     setConfirmModal({
       isOpen: true,
       message: 'ئایا دڵنیای لە سڕینەوەی هەموو کڕیارەکان؟ ئەم کردارە پاشگەزبوونەوەی نییە!',
-      onConfirm: () => {
-        setCustomers([]);
+      onConfirm: async () => {
+        try {
+          await deleteAllCustomers();
+        } catch (error: any) {
+          console.error("Error deleting all customers:", error);
+          alert("کێشەیەک ڕوویدا لە کاتی سڕینەوەی هەموو کڕیارەکان: " + (error.message || ""));
+        }
         setConfirmModal(null);
       }
     });
@@ -195,13 +205,18 @@ export const Customers = () => {
         <CustomerModal
           customer={editingCustomer}
           onClose={() => setIsModalOpen(false)}
-          onSave={(c) => {
-            if (editingCustomer) {
-              updateCustomer(editingCustomer.id, c);
-            } else {
-              addCustomer(c);
+          onSave={async (c) => {
+            try {
+              if (editingCustomer) {
+                await updateCustomer(editingCustomer.id, c);
+              } else {
+                await addCustomer(c);
+              }
+              setIsModalOpen(false);
+            } catch (error: any) {
+              console.error("Error saving customer:", error);
+              alert("کێشەیەک ڕوویدا لە کاتی پاشەکەوتکردن: " + (error.message || ""));
             }
-            setIsModalOpen(false);
           }}
         />
       )}
@@ -210,9 +225,14 @@ export const Customers = () => {
         <PaymentModal
           customer={selectedCustomerForPayment}
           onClose={() => setIsPaymentModalOpen(false)}
-          onSave={(amount, note) => {
-            receivePayment(selectedCustomerForPayment.id, amount, note);
-            setIsPaymentModalOpen(false);
+          onSave={async (amount, note) => {
+            try {
+              await receivePayment(selectedCustomerForPayment.id, amount, note);
+              setIsPaymentModalOpen(false);
+            } catch (error: any) {
+              console.error("Error saving payment:", error);
+              alert("کێشەیەک ڕوویدا لە کاتی پاشەکەوتکردن: " + (error.message || ""));
+            }
           }}
         />
       )}

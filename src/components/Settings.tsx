@@ -10,12 +10,17 @@ export const Settings = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title?: string; message: string; onConfirm: () => void } | null>(null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const parsed = parseFloat(rate);
     if (!isNaN(parsed) && parsed > 0) {
-      setExchangeRate(parsed);
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 2000);
+      try {
+        await setExchangeRate(parsed);
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
+      } catch (error: any) {
+        console.error("Error saving exchange rate:", error);
+        alert("کێشەیەک ڕوویدا لە کاتی پاشەکەوتکردن: " + (error.message || ""));
+      }
     }
   };
 
@@ -23,8 +28,14 @@ export const Settings = () => {
     setConfirmModal({
       isOpen: true,
       message: 'ئایا دڵنیای دەتەوێت بچیتە دەرەوە؟',
-      onConfirm: () => {
-        logout();
+      onConfirm: async () => {
+        try {
+          await logout();
+        } catch (error: any) {
+          console.error("Error logging out:", error);
+          alert("کێشەیەک ڕوویدا لە کاتی چوونە دەرەوە: " + (error.message || ""));
+        }
+        setConfirmModal(null);
       }
     });
   };

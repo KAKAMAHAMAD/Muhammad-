@@ -21,9 +21,11 @@ type AppContextType = AppState & {
   addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+  deleteAllProducts: () => Promise<void>;
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => Promise<string>;
   updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
+  deleteAllCustomers: () => Promise<void>;
   addToCart: (item: CartItem) => void;
   removeFromCart: (productId: string) => void;
   updateCartItem: (productId: string, quantity: number, isWholesale: boolean) => void;
@@ -38,6 +40,7 @@ type AppContextType = AppState & {
   receivePayment: (customerId: string, amount: number, note?: string) => Promise<void>;
   undoTransaction: (id: string) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  deleteAllTransactions: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -80,16 +83,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
       setState(prev => ({ ...prev, products }));
+    }, (error) => {
+      console.error("Error fetching products:", error);
     });
 
     const unsubCustomers = onSnapshot(collection(db, 'customers'), (snapshot) => {
       const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
       setState(prev => ({ ...prev, customers }));
+    }, (error) => {
+      console.error("Error fetching customers:", error);
     });
 
     const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
       const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
       setState(prev => ({ ...prev, transactions }));
+    }, (error) => {
+      console.error("Error fetching transactions:", error);
     });
 
     const settingsRef = doc(db, 'settings', 'general');
@@ -97,8 +106,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (docSnapshot.exists()) {
         setState(prev => ({ ...prev, exchangeRate: docSnapshot.data().exchangeRate || 1500 }));
       } else {
-        setDoc(settingsRef, { exchangeRate: 1500 });
+        setDoc(settingsRef, { exchangeRate: 1500 }).catch(err => console.error("Error creating settings:", err));
       }
+    }, (error) => {
+      console.error("Error fetching settings:", error);
     });
 
     // Mark as loaded after initial fetch
@@ -126,6 +137,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await signOut(auth);
     } catch (error) {
       console.error("Error signing out:", error);
+      throw error;
     }
   };
 
@@ -170,6 +182,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await batch.commit();
   };
 
+  const deleteAllProducts = async () => {
+    const batch = writeBatch(db);
+    state.products.forEach((product) => {
+      batch.delete(doc(db, 'products', product.id));
+    });
+    await batch.commit();
+  };
+
   const addCustomer = async (customer: Omit<Customer, 'id' | 'createdAt'>) => {
     const newDocRef = doc(collection(db, 'customers'));
     const newCustomer = removeUndefined({ ...customer, id: newDocRef.id, createdAt: Date.now() });
@@ -183,6 +203,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const deleteCustomer = async (id: string) => {
     await deleteDoc(doc(db, 'customers', id));
+  };
+
+  const deleteAllCustomers = async () => {
+    const batch = writeBatch(db);
+    state.customers.forEach((customer) => {
+      batch.delete(doc(db, 'customers', customer.id));
+    });
+    await batch.commit();
   };
 
   const addToCart = (item: CartItem) => {
@@ -402,6 +430,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await deleteDoc(doc(db, 'transactions', id));
   };
 
+  const deleteAllTransactions = async () => {
+    const batch = writeBatch(db);
+    state.transactions.forEach((transaction) => {
+      batch.delete(doc(db, 'transactions', transaction.id));
+    });
+    await batch.commit();
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -409,9 +445,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addProduct,
         updateProduct,
         deleteProduct,
+        deleteAllProducts,
         addCustomer,
         updateCustomer,
         deleteCustomer,
+        deleteAllCustomers,
         addToCart,
         removeFromCart,
         updateCartItem,
@@ -426,6 +464,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         receivePayment,
         undoTransaction,
         deleteTransaction,
+        deleteAllTransactions,
         loginWithGoogle,
         logout,
       }}
